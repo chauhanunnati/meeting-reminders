@@ -5,7 +5,7 @@ import EventKit
 /// when that event is about to start (within `leadMinutes`).
 ///
 /// Deduplication: we track event identifiers we've already fired for, so a
-/// meeting near the lead window only triggers a single airplane.
+/// meeting near the lead window only triggers a single reminder.
 final class CalendarWatcher {
     private let store = EKEventStore()
     private var timer: Timer?
@@ -23,7 +23,7 @@ final class CalendarWatcher {
         requestAccess { [weak self] granted in
             guard let self = self else { return }
             guard granted else {
-                NSLog("[MeetingAirplane] Calendar access denied. Grant it in System Settings → Privacy & Security → Calendars.")
+                NSLog("[\(Variant.appName)] Calendar access denied. Grant it in System Settings → Privacy & Security → Calendars.")
                 return
             }
             DispatchQueue.main.async {
@@ -39,14 +39,14 @@ final class CalendarWatcher {
         if #available(macOS 14.0, *) {
             store.requestFullAccessToEvents { granted, error in
                 if let error = error {
-                    NSLog("[MeetingAirplane] Calendar access error: \(error)")
+                    NSLog("[\(Variant.appName)] Calendar access error: \(error)")
                 }
                 completion(granted)
             }
         } else {
             store.requestAccess(to: .event) { granted, error in
                 if let error = error {
-                    NSLog("[MeetingAirplane] Calendar access error: \(error)")
+                    NSLog("[\(Variant.appName)] Calendar access error: \(error)")
                 }
                 completion(granted)
             }

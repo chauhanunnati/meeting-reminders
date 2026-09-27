@@ -1,136 +1,189 @@
-# Meeting Airplane
+# Meeting Reminders
 
-A tiny macOS background app that flies a cartoon airplane across your screen
-five minutes before every Outlook meeting, with a banner showing the meeting
-title and "starts in N min."
+Tiny macOS background apps that pop a playful animation across your screen a
+few minutes before every calendar (e.g. Outlook) meeting, with a banner
+showing the meeting title, start time and "in N min".
 
-It reads from the macOS Calendar app (which is where your Outlook account
-already lives), so there's no API key, no OAuth, no server. It runs as a
-launchd background agent — no Dock icon, no menu bar item.
+Two independent variants are built from the same calendar code:
 
-## Install
+| Variant | Animation | App / executable | Bundle id (prefs domain) | Logs |
+|---|---|---|---|---|
+| **Meeting Airplane** | cartoon plane towing a pink banner, left → right | `MeetingAirplane` | `com.user.meetingairplane` | `/tmp/meetingairplane.{out,err}.log` |
+| **Meeting Cat** | walking cat with a sky-blue banner, right → left | `MeetingCat` | `com.user.meetingcat` | `/tmp/meetingcat.{out,err}.log` |
+
+Both read from the macOS Calendar app (where your Outlook/Exchange account
+already lives), so there's no API key, no OAuth, no server. Each runs as a
+launchd background agent — no Dock icon, no menu bar item. Only one variant
+is installed at a time; installing one replaces the other.
+
+> Based on [meeting-airplane](https://github.com/aam11/meeting-airplane) by
+> Anish Aniket Mahanta — see [Credits](#credits).
+
+## Requirements
+
+- macOS 11+
+- Xcode Command Line Tools (`xcode-select --install`)
+
+## Quick preview (no install)
 
 ```bash
-git clone https://github.com/aam11/meeting-airplane.git
-cd meeting-airplane
-./install.sh
+git clone https://github.com/<your-username>/meeting-reminders.git
+cd meeting-reminders
+
+# Meeting Cat
+./build.sh cat && build/MeetingCat.app/Contents/MacOS/MeetingCat --test
+
+# Meeting Airplane
+./build.sh airplane && build/MeetingAirplane.app/Contents/MacOS/MeetingAirplane --test
+```
+
+`--test` plays the animation once with a dummy meeting, then quits.
+`./build.sh` with no argument builds both apps into `build/`.
+
+## Install (runs at login)
+
+```bash
+./install.sh            # Meeting Airplane (default)
+./install.sh cat        # Meeting Cat
 ```
 
 This will:
 
-1. Compile the Swift sources into `MeetingAirplane.app`.
-2. Copy it to `~/Applications/`.
-3. Register a launchd agent at `~/Library/LaunchAgents/com.user.meetingairplane.plist`.
-4. Start the agent immediately.
+1. Compile the chosen variant into `build/<App>.app`.
+2. Remove the other variant if it's installed (only one runs at a time, so
+   you never get two reminders for the same meeting).
+3. Copy the app to `~/Applications/`.
+4. Register a launchd agent at `~/Library/LaunchAgents/<bundle-id>.plist`.
+5. Start the agent immediately.
 
-Requires Xcode Command Line Tools (`xcode-select --install` if you don't
-have them).
+To switch, just install the other one — e.g. `./install.sh cat` replaces
+Meeting Airplane with Meeting Cat.
 
-## First-launch permission
-
-The first time the app reads your calendar, macOS will pop up a permission
-request. Grant it.
-
-If you miss the popup, go to **System Settings → Privacy & Security →
-Calendars** and enable *MeetingAirplane*.
-
-## Make sure Outlook is in Calendar.app
-
-This app reads from the built-in Calendar app, not from Outlook directly.
-If you haven't already added your Outlook account to Calendar:
-
-- **System Settings → Internet Accounts → Microsoft Exchange** (or Outlook),
-  then sign in.
-- Open Calendar.app once and confirm your Outlook events appear there.
-
-That's the only setup. After that the app sees every new and updated meeting
-automatically — no resync.
-
-## Preview the animation right now
-
-You don't have to wait for a real meeting. Run:
+Preview an installed copy:
 
 ```bash
+~/Applications/MeetingCat.app/Contents/MacOS/MeetingCat --test
 ~/Applications/MeetingAirplane.app/Contents/MacOS/MeetingAirplane --test
 ```
 
-This plays the animation once with a dummy meeting title, then quits.
+### First-launch permission
 
-## How it works
+The first time an app reads your calendar, macOS asks for permission. Grant
+it. If you miss the popup: **System Settings → Privacy & Security →
+Calendars** → enable *MeetingCat* / *MeetingAirplane*. Each variant has its
+own permission entry.
 
-- A 30-second timer asks EventKit for events in the next two hours.
-- For each event whose start time is between *now* and *now + 5 min*, the
-  app fires the airplane once. Dedup is keyed on `(event-id, start-time)`,
-  so recurring meetings each fire on their own occurrence and never twice.
-- The overlay is a borderless, transparent, click-through `NSWindow` at
-  screensaver level — it draws on top of everything (including full-screen
-  apps) and lets your clicks pass through to whatever's underneath.
-- The plane and banner slide across via a manual 60Hz `Timer` updating
-  `setFrameOrigin` (NSWindow's animator ignores duration overrides on recent
-  macOS). The window fades out in the final 0.6s and closes after the slide
-  finishes (~6s by default; configurable via `slideDuration`).
+### Make sure Outlook is in Calendar.app
 
-## Configuration
-
-Runtime settings live in macOS `UserDefaults` under domain
-`com.user.meetingairplane`. No GUI — use the `defaults` CLI:
-
-```bash
-# Slow the plane down to 12 seconds across the screen (default: 6)
-defaults write com.user.meetingairplane slideDuration -float 12
-
-# Fire 10 minutes early instead of 5 (default: 5)
-defaults write com.user.meetingairplane leadMinutes -int 10
-
-# Poll every 60 seconds instead of 30 (default: 30)
-defaults write com.user.meetingairplane pollSeconds -float 60
-
-# Tolerance band around the lead time, in seconds (default: 60)
-# Set to 0 for the strict "fire if event starts within leadMinutes" v0.2 behavior.
-defaults write com.user.meetingairplane triggerBandSeconds -float 60
-
-# Restart the agent to pick up changes
-launchctl kickstart -k "gui/$(id -u)/com.user.meetingairplane"
-```
-
-Out-of-range values clamp to safe limits; missing values use defaults.
-To reset everything:
-
-```bash
-defaults delete com.user.meetingairplane
-launchctl kickstart -k "gui/$(id -u)/com.user.meetingairplane"
-```
-
-## Tweaks
-
-Open `Sources/CalendarWatcher.swift`:
-
-- `leadMinutes` — how many minutes before the meeting to fire (default 5).
-- `pollSeconds` — how often to recheck the calendar (default 30).
-
-Open `Sources/OverlayController.swift` to adjust the animation, colors, or
-layout. After any edit run `./install.sh` again. For runtime-tunable values
-(durations, polling, lead time), use `defaults write` — see the
-**Configuration** section above.
-
-## Logs
-
-```
-/tmp/meetingairplane.out.log
-/tmp/meetingairplane.err.log
-```
+The apps read the built-in Calendar app, not Outlook directly. If your
+Outlook account isn't there yet: **System Settings → Internet Accounts →
+Microsoft Exchange** (or Outlook), sign in, then open Calendar.app once and
+confirm your events appear. New and updated meetings are picked up
+automatically after that.
 
 ## Uninstall
 
 ```bash
-./uninstall.sh
+./uninstall.sh          # Meeting Airplane
+./uninstall.sh cat      # Meeting Cat
 ```
 
 Removes the launch agent and the installed `.app`. Calendar permission is
-left in place (revoke it in System Settings if you also want that gone).
+left in place (revoke it in System Settings if you want).
+
+## How it works
+
+- A timer (default every 30s) asks EventKit for events in the next two hours.
+- Each event starting within the lead window (default 5 min) fires the
+  animation once. Dedup is keyed on `(event-id, start-time)`, so recurring
+  meetings fire once per occurrence.
+- The overlay is a borderless, transparent, click-through, non-activating
+  panel above everything (including full-screen apps); clicks pass through.
+- A manual 60Hz `Timer` slides the window across the screen and fades it out
+  at the end. Meeting Cat also steps through its 24-frame walk cycle on the
+  same timer.
+
+## Configuration
+
+Runtime settings live in `UserDefaults` under each app's bundle id. Use the
+`defaults` CLI (shown for the cat; swap in `com.user.meetingairplane` for
+the plane):
+
+```bash
+# Time to cross the screen in seconds (default: cat 12, airplane 6)
+defaults write com.user.meetingcat slideDuration -float 15
+
+# Fire 10 minutes early instead of 5 (default: 5)
+defaults write com.user.meetingcat leadMinutes -int 10
+
+# Poll every 60 seconds instead of 30 (default: 30)
+defaults write com.user.meetingcat pollSeconds -float 60
+
+# Fade-out length in seconds (default: 0.6)
+defaults write com.user.meetingcat fadeDuration -float 1
+
+# Tolerance band around the lead time, in seconds (default: 60). With the
+# defaults a meeting fires once when it's 4–6 minutes away. Set to 0 to fire
+# as soon as a meeting is within leadMinutes.
+defaults write com.user.meetingcat triggerBandSeconds -float 60
+
+# Restart the agent to pick up changes
+launchctl kickstart -k "gui/$(id -u)/com.user.meetingcat"
+```
+
+Out-of-range values clamp to safe limits; missing values use defaults.
+Reset with `defaults delete com.user.meetingcat` and restart the agent.
+
+## Project structure
+
+```
+Sources/
+  Shared/     calendar polling, config, app entry point (used by both apps)
+  Airplane/   airplane overlay + per-app constants (Variant.swift)
+  Cat/        cat overlay + per-app constants (Variant.swift)
+art/
+  plane.png, banner.png   airplane art (banner is recolored at runtime for the cat)
+  cat/                    cat walk-cycle frames (cat_000.png … cat_023.png)
+  LICENSE-art.txt         artwork credits and licenses
+tools/
+  extract-frames.swift    turns a green-screen video into transparent PNG frames
+Info-Airplane.plist, Info-Cat.plist   app bundle metadata per variant
+build.sh, install.sh, uninstall.sh    take an optional `airplane` | `cat` argument
+docs/                     original meeting-airplane design notes/roadmap
+```
+
+To tweak visuals, edit `Sources/Cat/OverlayController.swift` (cat size,
+banner color, text color are at the top of `makeContentView`) or
+`Sources/Airplane/OverlayController.swift`, then rebuild/reinstall.
+
+### Regenerating the cat frames
+
+The frames in `art/cat/` are committed, so this is only needed if you want
+to change them. Download the source video from
+[Pixabay](https://pixabay.com/videos/cat-walk-walking-animal-pet-2d-92641/)
+and save it as `art/source/cat_moving.mp4` (ignored by git), then:
+
+```bash
+swiftc -O -o /tmp/extract-frames tools/extract-frames.swift
+/tmp/extract-frames art/source/cat_moving.mp4 art/cat
+```
 
 ## Credits
 
-Plane and banner artwork by [@conniexu444](https://github.com/conniexu444),
-borrowed from [meeting-reminder](https://github.com/conniexu444/meeting-reminder)
-under the MIT License. Full license text in [`art/LICENSE-art.txt`](art/LICENSE-art.txt).
+- **Original project:** [meeting-airplane](https://github.com/aam11/meeting-airplane)
+  by **Anish Aniket Mahanta**, released under the MIT License. Meeting
+  Airplane in this repo is that project's app, preserved as-is; the calendar
+  logic shared by both variants comes from it too. The original copyright
+  notice is kept in [`LICENSE`](LICENSE).
+- **Plane and banner artwork:** [@conniexu444](https://github.com/conniexu444),
+  from [meeting-reminder](https://github.com/conniexu444/meeting-reminder)
+  (MIT).
+- **Cat animation:** frames derived from a
+  [Pixabay video](https://pixabay.com/videos/cat-walk-walking-animal-pet-2d-92641/)
+  under the Pixabay Content License.
+
+Full artwork license details: [`art/LICENSE-art.txt`](art/LICENSE-art.txt).
+
+## License
+
+MIT — see [`LICENSE`](LICENSE).

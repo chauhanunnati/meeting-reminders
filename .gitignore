@@ -13,3 +13,7 @@ build/
 
 # Claude/superpowers memory (keep specs + plans, exclude any local-only state)
 .claude/
+
+# Local-only, unused animation experiments
+Walking Cat.json
+Walking Cat.lottie

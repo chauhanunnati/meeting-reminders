@@ -1,7 +1,7 @@
 import Foundation
 
-/// User-tunable settings, read from UserDefaults (domain
-/// `com.user.meetingairplane`) at app launch. Out-of-range or missing values
+/// User-tunable settings, read from UserDefaults (domain = the app's bundle
+/// id: `com.user.meetingairplane` or `com.user.meetingcat`) at app launch. Out-of-range or missing values
 /// fall back to safe defaults so a corrupt prefs file can never disable the
 /// app.
 struct Config {
@@ -13,13 +13,13 @@ struct Config {
 
     static func load() -> Config {
         // UserDefaults.standard resolves to the bundle's own domain
-        // (`com.user.meetingairplane`) for both `--test` direct-binary runs
+        // (`com.user.meetingairplane` / `com.user.meetingcat`) for both `--test` direct-binary runs
         // and launchd runs — verified empirically.
         let d = UserDefaults.standard
         return Config(
             leadMinutes:        clampInt(d.integer(forKey: "leadMinutes"),        default: 5,  min: 1,  max: 60),
             pollSeconds:        clamp(d.double(forKey: "pollSeconds"),            default: 30, min: 10, max: 300),
-            slideDuration:      clamp(d.double(forKey: "slideDuration"),          default: 6,  min: 2,  max: 30),
+            slideDuration:      clamp(d.double(forKey: "slideDuration"),          default: Variant.defaultSlideDuration, min: 2,  max: 60),
             fadeDuration:       clamp(d.double(forKey: "fadeDuration"),           default: 0.6, min: 0,  max: 3),
             triggerBandSeconds: clamp(d.double(forKey: "triggerBandSeconds"),     default: 60, min: 0,  max: 300)
         )

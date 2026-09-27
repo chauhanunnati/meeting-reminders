@@ -1,4 +1,18 @@
-The PNG files in this directory (plane.png and banner.png) are derived from
+Artwork credits for this directory
+==================================
+
+1. art/cat/*.png (Meeting Cat walk-cycle frames)
+
+   Derived from the "Cat Walk Walking" green-screen video on Pixabay:
+   https://pixabay.com/videos/cat-walk-walking-animal-pet-2d-92641/
+   used under the Pixabay Content License.
+   The frames were modified (chroma-keyed, despilled, cropped, trimmed to a
+   single walk cycle) with tools/extract-frames.swift.
+
+2. plane.png and banner.png (Meeting Airplane; banner also recolored at
+   runtime by Meeting Cat)
+
+The PNG files plane.png and banner.png are derived from
 the Assets.xcassets folder of https://github.com/conniexu444/meeting-reminder
 by Connie Xu (@conniexu444) and are used here under the terms of that
 project's MIT license, reproduced in full below.
