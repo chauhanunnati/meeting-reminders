@@ -27,7 +27,7 @@ is installed at a time; installing one replaces the other.
 ## Quick preview (no install)
 
 ```bash
-git clone https://github.com/<your-username>/meeting-reminders.git
+git clone https://github.com/chauhanunnati/meeting-reminders.git
 cd meeting-reminders
 
 # Meeting Cat
