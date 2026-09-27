@@ -19,67 +19,65 @@ is installed at a time; installing one replaces the other.
 > Based on [meeting-airplane](https://github.com/aam11/meeting-airplane) by
 > Anish Aniket Mahanta — see [Credits](#credits).
 
-## Requirements
+## Install
 
-- macOS 11+
-- Xcode Command Line Tools (`xcode-select --install`)
-
-## Quick preview (no install)
+Clone the repository and install the reminder variant you want:
 
 ```bash
 git clone https://github.com/chauhanunnati/meeting-reminders.git
 cd meeting-reminders
 
-# Meeting Cat
-./build.sh cat && build/MeetingCat.app/Contents/MacOS/MeetingCat --test
-
-# Meeting Airplane
-./build.sh airplane && build/MeetingAirplane.app/Contents/MacOS/MeetingAirplane --test
+./install.sh          # Meeting Airplane
+./install.sh cat      # Meeting Cat
 ```
 
-`--test` plays the animation once with a dummy meeting, then quits.
-`./build.sh` with no argument builds both apps into `build/`.
+This compiles the chosen app, copies it to `~/Applications/`, registers and
+starts its launchd agent, and removes the other variant if it is installed.
+Only one reminder app runs at a time; to switch, run the install command for
+the other variant. Requires macOS 11+ and Xcode Command Line Tools
+(`xcode-select --install` if needed).
 
-## Install (runs at login)
+## First-launch permission
 
-```bash
-./install.sh            # Meeting Airplane (default)
-./install.sh cat        # Meeting Cat
-```
+The first time the app reads your calendar, macOS asks for permission. Grant
+it. If you miss the popup, go to **System Settings → Privacy & Security →
+Calendars** and enable *MeetingAirplane* or *MeetingCat*, whichever you
+installed.
 
-This will:
-
-1. Compile the chosen variant into `build/<App>.app`.
-2. Remove the other variant if it's installed (only one runs at a time, so
-   you never get two reminders for the same meeting).
-3. Copy the app to `~/Applications/`.
-4. Register a launchd agent at `~/Library/LaunchAgents/<bundle-id>.plist`.
-5. Start the agent immediately.
-
-To switch, just install the other one — e.g. `./install.sh cat` replaces
-Meeting Airplane with Meeting Cat.
-
-Preview an installed copy:
-
-```bash
-~/Applications/MeetingCat.app/Contents/MacOS/MeetingCat --test
-~/Applications/MeetingAirplane.app/Contents/MacOS/MeetingAirplane --test
-```
-
-### First-launch permission
-
-The first time an app reads your calendar, macOS asks for permission. Grant
-it. If you miss the popup: **System Settings → Privacy & Security →
-Calendars** → enable *MeetingCat* / *MeetingAirplane*. Each variant has its
-own permission entry.
-
-### Make sure Outlook is in Calendar.app
+## Make sure Outlook is in Calendar.app
 
 The apps read the built-in Calendar app, not Outlook directly. If your
-Outlook account isn't there yet: **System Settings → Internet Accounts →
-Microsoft Exchange** (or Outlook), sign in, then open Calendar.app once and
-confirm your events appear. New and updated meetings are picked up
-automatically after that.
+Outlook account isn't there yet:
+
+- Go to **System Settings → Internet Accounts → Microsoft Exchange** (or
+  Outlook), then sign in.
+- Open Calendar.app once and confirm your Outlook events appear.
+
+After that, new and updated meetings are picked up automatically.
+
+## Preview the animation right now
+
+You don't have to wait for a real meeting. Build and play either animation
+with a dummy meeting title:
+
+```bash
+# Meeting Airplane
+./build.sh airplane
+build/MeetingAirplane.app/Contents/MacOS/MeetingAirplane --test
+
+# Meeting Cat
+./build.sh cat
+build/MeetingCat.app/Contents/MacOS/MeetingCat --test
+```
+
+The preview plays once, then quits. To preview an already installed app, run:
+
+```bash
+~/Applications/MeetingAirplane.app/Contents/MacOS/MeetingAirplane --test
+~/Applications/MeetingCat.app/Contents/MacOS/MeetingCat --test
+```
+
+Running `./build.sh` without an argument builds both apps into `build/`.
 
 ## Uninstall
 
